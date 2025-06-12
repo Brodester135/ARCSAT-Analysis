@@ -1,7 +1,3 @@
-#Write code to match the wcs of each image of LPSEB to align them 
-#Then images are aligned, import them to reduction, and change photometry
-#To get the stars based off of ra and dec, also see if the previous can be done without aligning the images
-
 from astropy.io import fits
 from astropy.wcs import WCS
 from reproject import reproject_interp
@@ -143,6 +139,6 @@ def center_image(reduced_dir, index_dir="astrometry/data"):
 
         cleanup_astrometry_files(solved_img)
 
-    print("All images aligned! Good work boss")
+    print("All images aligned!")
 
 

@@ -6,7 +6,7 @@ import gc
 from reduction import run_reduction
 
 if __name__ == "__main__":
-    data_dir = "Data/"
+    data_dir = "data/"
 
     run_reduction(data_dir, skip=True, save_npy=True)
 
