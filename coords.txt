@@ -5,5 +5,3 @@ comp_pix = [(483.4, 618.8),
                   (493.4 - 100, 750.0 - 100)] #account for wcs cropping
 
 Coords for running photometry
-
-FIX COMP PIX 

@@ -24,9 +24,7 @@ def find_centroid_pixel(image_file, x, y):
         return None
     
     cutout = data[int(y)-7:int(y)+8, int(x)-7:int(x)+8] #accounts for an area around each coordinate (15x15 cutout)
-    if np.any(np.isnan(cutout)) or np.all(cutout ==0):
-        print(F"Invalid cutout (Nan or zero) for {image_file}: NaNs={np.sum(np.isnan(cutout))}, Zeros={np.all(cutout == 0)}")
-        return None
+
     dx, dy = centroid_com(cutout)
 
     del data, cutout
@@ -67,23 +65,16 @@ def differential_photometry(image_list, target_pix, comp_pix, aperture=5, save_n
         target_xy = find_centroid_pixel(img, *target_pix)
         comp_xy = [find_centroid_pixel(img, *pix) for pix in comp_pix]
 
-        if target_xy is None or any(c is None for c in comp_xy):
-            print("Skipping image due to missing centroid(s)")
-            continue
-
         all_xy = [target_xy] + comp_xy
 
         print("Target XY:", target_xy)
         print("Comparison XYs:", comp_xy)
 
         net_flux, _ = measure_photometry(img, all_xy, r=aperture)
-        if net_flux is None:
-            print(f"skipping {img} due to invalid flux")
-            continue
+
 
         target_flux_clipped = sigma_clip([net_flux[0]], sigma=3, maxiters=3)
         if target_flux_clipped.mask[0]:
-            print(f"skipping outlier target flux in {img}")
             debug_centroid(img, *target_pix, f"centroid_target{img.name}.png")
             continue
         target_flux = target_flux_clipped[0]
@@ -106,6 +97,7 @@ def differential_photometry(image_list, target_pix, comp_pix, aperture=5, save_n
 
 
 def debug_centroid(image_file, x, y, output="centroid_debug.png"):
+    
     with fits.open(image_file) as hdul:
         data = hdul[0].data
 
@@ -129,74 +121,52 @@ def plot_light_curves(times, diff_flux, output="lightcurve.png"):
     times = np.array(times)
     diff_flux = np.array(diff_flux)
 
-    df = polars.DataFrame({
-        "times": times,
-        "diff_flux": diff_flux
-    })
-
-    seaborn.set_theme(style="whitegrid")
-    
-
-    plt.figure(figsize=(8,5))
-    seaborn.scatterplot(data=df, x='times', y='diff_flux')
-    plt.xlabel("Time of Obsevation (MJD)")
+    plt.figure(figsize=(8, 5))
+    plt.scatter(times, diff_flux, c='blue')
+    plt.xlabel("Time of Observation (MJD)")
     plt.ylabel("Relative Flux Target / Comparison")
     plt.title("Differential Light Curve")
+    plt.grid(True)
     plt.tight_layout()
     plt.savefig(output, dpi=300)
+    plt.close()
 
     plt.close('all')
-    print(f"Light curve saved to {output}")
+    
 
-def plot_phase_curve(times, diff_flux, period, output="phase_curve.png"):
+def plot_phase_curve(times, diff_flux, period, output="phasecurve.png"):
+    
     times = np.array(times)
     diff_flux = np.array(diff_flux)
 
-    #filter more invalid fluxes
     valid = ~np.isnan(diff_flux) & (diff_flux > -1e10)
     times = times[valid]
     diff_flux = diff_flux[valid]
-    if len(times) == 0:
-        print("No valid data points after filtering")
 
-    df = polars.DataFrame({
-        "times": times,
-        "diff_flux": diff_flux
-    })
-
-    #make sure times are in MJD
     times = Time(times, format='mjd')
 
     # Fixed T0 from Yang (in MJD)
-    T0 = 54957.191639
+    T_0 = 54957.191639
 
-    df = df.with_columns([
-        (-2.5 * np.log10(df["diff_flux"])).alias("mags"),
-        (((df["times"] - T0) / period + 0.5) % 1).alias("phase_1")
-    ])
+    mags = -2.5 * np.log10(diff_flux)
+    phase1 = (times - T_0) / period + 0.5) % 1
+    phase2 = phase1 + 1
 
-    #insert phase 2 into our data fram
-    df = df.with_columns([
-        (df["phase_1"]+1).alias("phase_2")
-    ])
 
-    seaborn.set_theme(style="whitegrid")
-    
     plt.figure(figsize=(8, 5))
-    seaborn.scatterplot(data=df, x='phase_1', y='mags', label='Phase 0–1')
-    seaborn.scatterplot(data=df, x='phase_2', y='mags', label='Phase 1–2')
+    plt.scatter(phase1, mags, c='blue', label='Phase 0–1')
+    plt.scatter(phase2, mags, c='red', label='Phase 1–2')
     plt.xlabel("Phase")
-    plt.ylabel("Apparent Magnitude")
+    plt.ylabel("Absolute Magnitude")
     plt.title("Phase-Magnitude Light Curve")
-    plt.xlim(0, 2)
-    plt.gca().invert_yaxis()
     plt.grid(True)
-    plt.legend()
+    plt.tight_layout()
+    plt.gca().invert_yaxis()
     plt.savefig(output, dpi=300)
+    plt.close()
 
     plt.close('all')
     
-
 
 if __name__ == "__main__":
 
