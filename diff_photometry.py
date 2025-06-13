@@ -122,9 +122,9 @@ def plot_light_curves(times, diff_flux, output="lightcurve.png"):
     diff_flux = np.array(diff_flux)
 
     plt.figure(figsize=(8, 5))
-    plt.scatter(times, diff_flux, c='blue')
+    plt.scatter(times, diff_flux, color='Red')
     plt.xlabel("Time of Observation (MJD)")
-    plt.ylabel("Relative Flux Target / Comparison")
+    plt.ylabel("Differential Flux")
     plt.title("Differential Light Curve")
     plt.grid(True)
     plt.tight_layout()
@@ -143,19 +143,19 @@ def plot_phase_curve(times, diff_flux, period, output="phasecurve.png"):
     times = times[valid]
     diff_flux = diff_flux[valid]
 
-    times = Time(times, format='mjd')
+    times = Time(times, format='mjd').value
 
     # Fixed T0 from Yang (in MJD)
     T_0 = 54957.191639
 
     mags = -2.5 * np.log10(diff_flux)
-    phase1 = (times - T_0) / period + 0.5) % 1
+    phase1 = ((times - T_0) / period + 0.5) % 1
     phase2 = phase1 + 1
 
 
     plt.figure(figsize=(8, 5))
-    plt.scatter(phase1, mags, c='blue', label='Phase 0–1')
-    plt.scatter(phase2, mags, c='red', label='Phase 1–2')
+    plt.scatter(phase1, mags, color='blue', label='Phase 0–1')
+    plt.scatter(phase2, mags, color='red', label='Phase 1–2')
     plt.xlabel("Phase")
     plt.ylabel("Absolute Magnitude")
     plt.title("Phase-Magnitude Light Curve")
@@ -177,12 +177,9 @@ if __name__ == "__main__":
     target_pix = (505.8 - 100, 503.7 - 100) #account for wcs cropping
 
 
-    comp_pix = [(483.4, 618.8),
-                (668.186, 204.731),
-                (495.8, 752)]
-    comp_pix = [(483.4 - 100, 618.8- 100),
-                (668.186 - 100, 204.731 - 100),
-                (495.8 - 100, 752 - 100)] #account for wcs cropping
+    comp_pix = [(483.4, 618.8), (668.186, 204.731),(495.8, 752)]
+    comp_pix = [(483.4 - 100, 618.8- 100),(668.186 - 100, 204.731 - 100),(495.8 - 100, 752 - 100)]
+    #account for wcs cropping
 
     image_list = sorted(pathlib.Path(reduced_dir).glob('reduced_science*_reprojected.fits'))
 
@@ -191,4 +188,5 @@ if __name__ == "__main__":
 
     times, diff_flux, comp_fluxes, raw_flux = differential_photometry(image_list, target_pix, comp_pix, save_npy=True)
 
-    plot_phase_curve(times=times, diff_flux=diff_flux, period=0.25, output="phase_curve.png")
+    plot_phase_curve(times=times, diff_flux=diff_flux, period=0.25, output="phasecurve.png")
+    plot_light_curves(times=times, diff_flux=diff_flux, output="lightcurve.png")
